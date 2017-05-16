@@ -37,7 +37,7 @@ def getImage():
     return img,rows,cols
 
 # Global constants
- 
+ #BLAHDSFHSDGFHSDGFSDF
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
