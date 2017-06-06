@@ -43,7 +43,7 @@ YELLOW = (255, 255, 0)
 SCALE = 2
 
 # Screen dimensions
-#get the images dimensions
+#get the images dimensions --> will be moved to own class in future
 img,SCREEN_HEIGHT,SCREEN_WIDTH = getImage()
 
 #scaled dimensions of the image
@@ -226,7 +226,7 @@ class Enemy(pygame.sprite.Sprite):
 
         #Gravity
         self.calc_grav()
-        print(self.jumping)
+        #print(self.jumping)
 
         #Chase direction
         self.chase()
@@ -303,8 +303,6 @@ class Enemy(pygame.sprite.Sprite):
         if diff_y > 10 and not self.jumping:#self.j_count==0:
             self.jump()
 
-
-
     def jump(self):
         """ Called when chase() decides to jump.
         Sets the launch velocity for the jump and resets the jump duration.
@@ -326,12 +324,9 @@ class Enemy(pygame.sprite.Sprite):
             if self.change_y == 0 or self.change_y == 1:  #initial velocity
                 self.change_y = -7 #adjust this to change jump height
 
-
     def shift(self,shift_x,shift_y):
         self.rect.x += shift_x
         self.rect.y += shift_y
-
-
 
 class Platform(pygame.sprite.Sprite):
     """ Platform the user can jump on """
@@ -425,7 +420,7 @@ class Level(object):
             platform.rect.y += shift_y
 
 
-# Create platforms for the level
+
 class Level_01(Level):
     """ Definition for level 1. """
 
@@ -451,12 +446,13 @@ class Level_01(Level):
         self.platform_list.add(block)
 
 
+#Image processing functions will be moved to own class in future
 def rgb2gray(rgb):
     """converts an RGB image to grayscale using the luma coding formula:
     Y = 0.299R + 0.587G + 0.114B"""
     return np.dot(rgb[...,:3], [0.299,0.587,0.114])
 
-
+#Image processing functions will be moved to own class in future
 def sobel(img):
     """apply the Sobel filter to detect edges (grayscale only)"""
     if len(img.shape)>2:
@@ -481,7 +477,7 @@ def sobel(img):
 
     return sb
 
-
+#Image processing functions will be moved to own class in future
 def grayHorizontal(img):
     """colors the horizontal lines in an image white and blacks the rest
     input 2-D array"""
@@ -504,6 +500,7 @@ def grayHorizontal(img):
 
     return img_horiz
 
+#Image processing functions will be moved to own class in future
 def getPlatforms(img):
     """returns a list of platforms (defined by width, height, x, y) given a b/w image
     platforms are created wherever whitespace is detected. used with the output of grayHorizontal method"""
@@ -535,31 +532,250 @@ def getPlatforms(img):
 
     return platforms
 
-def shiftSpriteList(sprite_list,shift_x,shift_y):
-    for sprite in sprite_list:
-        sprite.shift(shift_x,shift_y)
+class Game(object):
 
-def newCoin(level, current_level):
-    """generates n new coins randomly distributed across platforms in level"""
-    #create n Coins
-    #for i in range(n):
+    def newCoin(self):
+        """generates a new coin on a random platform in the level"""
+
         #place on random platform
-    #NOTE: platform is NOT a Platform object, but a length 4 list containing width,height,x,y created in the getPlatforms function
-    platform = level[floor(len(level)*random())]
-    coin = Coin(SCALE*(platform[2] + platform[0]*random())+current_level.world_shift_x,SCALE*(platform[3]-10)+current_level.world_shift_y)
+        #NOTE: platform is NOT a Platform object, but a length 4 list containing width,height,x,y created in the getPlatforms function
+        platform = self.level[floor(len(self.level)*random())]
+        coin = Coin(SCALE*(platform[2] + platform[0]*random())+self.current_level.world_shift_x,SCALE*(platform[3]-10)+self.current_level.world_shift_y)
 
-    return coin
+        return coin
 
-def newEnemy(level,current_level,player):
-    platform = level[floor(len(level)*random())]
-    enemy = Enemy(SCALE*(platform[2] + platform[0]*random())+current_level.world_shift_x,SCALE*(platform[3]-10)+current_level.world_shift_y,current_level,player)
+    def newEnemy(self):
+        """generates a new enemy on a random platform in the level"""
+        platform = self.level[floor(len(self.level)*random())]
+        enemy = Enemy(SCALE*(platform[2] + platform[0]*random())+self.current_level.world_shift_x,SCALE*(platform[3]-10)+self.current_level.world_shift_y,self.current_level,self.player)
 
-    return enemy
+        return enemy
+
+    def __init__(self,level):
+
+        self.score = 0
+        self.game_over = False
+
+        self.level = level
+
+        self.background_image = pygame.image.load('images/desktop1.png').convert()
+        self.background_image = pygame.transform.scale(self.background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
+        self.background_position = [0, 0]
+
+        #Create sprite lists
+        self.player = Player()
+
+        # Create all the levels
+        self.level_list = []
+        self.level_list.append( Level_01(self.player, self.level) )
+
+        # Set the current level
+        self.current_level_no = 0
+        self.current_level = self.level_list[self.current_level_no]
+
+
+        self.active_sprite_list = pygame.sprite.Group()
+        self.player.level = self.current_level
+
+        self.player.rect.x = init_x
+        self.player.rect.y = init_y #SCREEN_HEIGHT - player.rect.height
+        self.active_sprite_list.add(self.player)
+
+        # List of each bullet
+        self.bullet_list = pygame.sprite.Group()
+
+        #list of each coin
+        self.coin_list = pygame.sprite.Group()
+        for i in range(10):
+            coin = self.newCoin()
+            self.active_sprite_list.add(coin)
+            self.coin_list.add(coin)
+
+        #list of each enemy
+        self.enemy_list = pygame.sprite.Group()
+        #enemy = Enemy(300,100,current_level,player)
+        enemy = self.newEnemy()
+        self.enemy_list.add(enemy)
+        self.active_sprite_list.add(enemy)
+
+    def shiftSpriteList(self,sprite_list,shift_x,shift_y):
+        """shifts the sprites in sprite_list by an amount (shift_x,shift_y).
+        Matches the world shift that occurs in the Level class"""
+        for sprite in sprite_list:
+            sprite.shift(shift_x,shift_y)
+
+    def process_events(self):
+        """processes events such as key strokes, mouse clicks, and quit commands"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return True
+            #restart the game is game_over is True and the mouse is clicked
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.game_over:
+                    self.__init__(self.level)
+
+            if event.type == pygame.KEYDOWN:
+                #navigate the player using the arrow keys or WASD
+                if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                    self.player.go_left()
+                if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                    self.player.go_right()
+                if event.key == pygame.K_UP or event.key == pygame.K_w:
+                    self.player.jump()
+                #reset the player's position to the initial position. Used for testing.
+                if event.key == pygame.K_r:
+                    self.player.reset()
+                if event.key == pygame.K_z or event.key == pygame.K_COMMA:
+                    # Fire a bullet if the user clicks the mouse button
+                    bullet = Bullet(-10)
+                    # Set the bullet so it is where the player is
+                    bullet.rect.x = self.player.rect.x
+                    bullet.rect.y = self.player.rect.y
+                    # Add the bullet to the lists
+                    self.active_sprite_list.add(bullet)
+                    self.bullet_list.add(bullet)
+                if event.key == pygame.K_x or event.key == pygame.K_PERIOD:
+                    # Fire a bullet if the user clicks the mouse button
+                    bullet = Bullet(10)
+                    # Set the bullet so it is where the player is
+                    bullet.rect.x = self.player.rect.x
+                    bullet.rect.y = self.player.rect.y
+                    # Add the bullet to the lists
+                    self.active_sprite_list.add(bullet)
+                    self.bullet_list.add(bullet)
+
+            #stop moving once the key is released
+            if event.type == pygame.KEYUP:
+                if (event.key == pygame.K_LEFT or event.key == pygame.K_a) and self.player.change_x < 0:
+                    self.player.stop()
+                if (event.key == pygame.K_RIGHT or event.key == pygame.K_d) and self.player.change_x > 0:
+                    self.player.stop()
+                if event.key == pygame.K_UP or event.key == pygame.K_w:
+                    self.player.reset_jump()
+
+        return False    #False indicates not done
+
+    def run_logic(self):
+        """Main game logic"""
+        if not self.game_over:
+
+            # Update the player.
+            self.active_sprite_list.update()
+
+            # Update items in the level
+            self.current_level.update()
+
+            # Calculate mechanics for each bullet
+            for bullet in self.bullet_list:
+
+                # See if it hit a block
+                #block_hit_list = pygame.sprite.spritecollide(bullet, block_list, True)  #True means the collided block in block_list will disappear on collision
+
+                # For each block hit, remove the bullet and add to the score
+                #for block in block_hit_list:
+                #    bullet_list.remove(bullet)
+                #    all_sprites_list.remove(bullet)
+                #    score += 1
+                #    print(score)
+
+                # Remove the bullet if it flies up off the screen
+                if bullet.rect.x < -10 or bullet.rect.x > SCREEN_WIDTH+10:
+                    self.bullet_list.remove(bullet)
+                    self.active_sprite_list.remove(bullet)
+
+            # Calculate coins collected
+            new_en = 2 #spawn an enemy every new_en coins collected
+            block_hit_list = pygame.sprite.spritecollide(self.player,self.coin_list,True)
+            for block in block_hit_list:
+                #spawn a new coin for each one collected
+                coin = self.newCoin()
+                self.coin_list.add(coin)
+                self.active_sprite_list.add(coin)
+
+                #spawn a new enemy for every new_en-th coin collected
+                if self.score % new_en == 0:
+                    enemy = self.newEnemy()
+                    self.enemy_list.add(enemy)
+                    self.active_sprite_list.add(enemy)
+
+                self.score+=1
+
+            # Detect enemy collision
+            block_hit_list = pygame.sprite.spritecollide(self.player,self.enemy_list,False)
+            for block in block_hit_list:
+                self.game_over = True
+
+            # If the player gets near the right side, shift the world left (-x)
+            if self.player.rect.right >= right_thresh and self.current_level.world_shift_x >= DISPLAY_WIDTH - SCREEN_WIDTH:#right_thresh - SCREEN_WIDTH:
+                diff = self.player.rect.right - right_thresh
+                self.player.rect.right = right_thresh
+                self.current_level.shift_world(-diff,0)
+                self.background_position[0]-=diff
+
+                self.shiftSpriteList(self.coin_list,-diff,0)
+                self.shiftSpriteList(self.bullet_list,-diff,0)
+                self.shiftSpriteList(self.enemy_list,-diff,0)
+
+            # If the player gets near the left side, shift the world right (+x)
+            if self.player.rect.left <= left_thresh and self.current_level.world_shift_x <= 0:
+                diff = left_thresh - self.player.rect.left
+                self.player.rect.left = left_thresh
+                self.current_level.shift_world(diff,0)
+                self.background_position[0]+=diff
+
+                self.shiftSpriteList(self.coin_list,diff,0)
+                self.shiftSpriteList(self.bullet_list,diff,0)
+                self.shiftSpriteList(self.enemy_list,diff,0)
+
+            # If the player gets near the top, shift the world down (+y)
+            if self.player.rect.top <= up_thresh and self.current_level.world_shift_y <= 0:
+                diff = up_thresh - self.player.rect.top
+                self.player.rect.top = up_thresh
+                self.current_level.shift_world(0,diff)
+                self.background_position[1]+=diff
+
+                self.shiftSpriteList(self.coin_list,0,diff)
+                self.shiftSpriteList(self.bullet_list,0,diff)
+                self.shiftSpriteList(self.enemy_list,0,diff)
+
+            # If the player gets near the bottom, shift the world up (-y)
+            if self.player.rect.bottom >= down_thresh and self.current_level.world_shift_y >= DISPLAY_HEIGHT-SCREEN_HEIGHT:#down_thresh - SCREEN_HEIGHT:
+                diff = self.player.rect.bottom - down_thresh
+                self.player.rect.bottom = down_thresh
+                self.current_level.shift_world(0,-diff)
+                self.background_position[1]-=diff
+
+                self.shiftSpriteList(self.coin_list,0,-diff)
+                self.shiftSpriteList(self.bullet_list,0,-diff)
+                self.shiftSpriteList(self.enemy_list,0,-diff)
+
+    def display_frame(self,screen):
+        """draw the current frame to the screen"""
+
+        #game over screen
+        if self.game_over:
+            font = pygame.font.Font(None,75)
+            text = font.render("Game Over, click to restart", True, BLACK)
+            center_x = (DISPLAY_WIDTH // 2) - (text.get_width() // 2)
+            center_y = (DISPLAY_HEIGHT // 2) - (text.get_height() // 2)
+            screen.blit(text, [center_x,center_y])#[center_x, center_y])
+
+        #normal game screen
+        else:
+            screen.blit(self.background_image, self.background_position)
+            self.current_level.draw(screen)
+            self.active_sprite_list.draw(screen)
+
+            font = pygame.font.Font(None, 50)
+            output_str = 'Score: ' + str(self.score)
+            text = font.render(output_str, True, BLACK)
+            screen.blit(text, [50,550])
+
+        pygame.display.flip()
+
 
 def main():
-    """Image Reading and processing"""
-    #image is read before global variables are declared since they depend on the image
-
+    """Image Reading and processing. Will move to separate class in future"""
     #convert to grayscale
     img_gray = rgb2gray(img)
 
@@ -576,51 +792,10 @@ def main():
     pygame.init()
 
     # Set the height and width of the screen
-    size = [DISPLAY_WIDTH,DISPLAY_HEIGHT]#[SCREEN_WIDTH, SCREEN_HEIGHT]
+    size = [DISPLAY_WIDTH,DISPLAY_HEIGHT]
     screen = pygame.display.set_mode(size)
 
     pygame.display.set_caption("Platformer Jumper")
-
-    #set background image and position
-    background_image = pygame.image.load('images/desktop1.png').convert()
-    background_image = pygame.transform.scale(background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
-    background_position = [0, 0]
-
-    # Create the player
-    player = Player()
-
-    # Create all the levels
-    level_list = []
-    level_list.append( Level_01(player, level) )
-
-    # Set the current level
-    current_level_no = 0
-    current_level = level_list[current_level_no]
-
-
-    active_sprite_list = pygame.sprite.Group()
-    player.level = current_level
-
-    player.rect.x = init_x
-    player.rect.y = init_y #SCREEN_HEIGHT - player.rect.height
-    active_sprite_list.add(player)
-
-    # List of each bullet
-    bullet_list = pygame.sprite.Group()
-
-    #list of each coin
-    coin_list = pygame.sprite.Group()
-    for i in range(10):
-        coin = newCoin(level, current_level)
-        active_sprite_list.add(coin)
-        coin_list.add(coin)
-
-    #list of each enemy
-    enemy_list = pygame.sprite.Group()
-    #enemy = Enemy(300,100,current_level,player)
-    enemy = newEnemy(level,current_level,player)
-    enemy_list.add(enemy)
-    active_sprite_list.add(enemy)
 
     # Loop until the user clicks the close button.
     done = False
@@ -628,171 +803,21 @@ def main():
     # Used to manage how fast the screen updates
     clock = pygame.time.Clock()
 
-    # Score. increments for each Coin collected
-    score = 0
+    #iniitialize the Game class
+    game = Game(level)
 
     # -------- Main Program Loop -----------
     while not done:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                done = True
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                    player.go_left()
-                if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                    player.go_right()
-                if event.key == pygame.K_UP or event.key == pygame.K_w:
-                    player.jump()
-                if event.key == pygame.K_r:
-                    player.reset()
-                if event.key == pygame.K_z or event.key == pygame.K_COMMA:
-                    # Fire a bullet if the user clicks the mouse button
-                    bullet = Bullet(-10)
-                    # Set the bullet so it is where the player is
-                    bullet.rect.x = player.rect.x
-                    bullet.rect.y = player.rect.y
-                    # Add the bullet to the lists
-                    active_sprite_list.add(bullet)
-                    bullet_list.add(bullet)
-                if event.key == pygame.K_x or event.key == pygame.K_PERIOD:
-                    # Fire a bullet if the user clicks the mouse button
-                    bullet = Bullet(10)
-                    # Set the bullet so it is where the player is
-                    bullet.rect.x = player.rect.x
-                    bullet.rect.y = player.rect.y
-                    # Add the bullet to the lists
-                    active_sprite_list.add(bullet)
-                    bullet_list.add(bullet)
-
-            if event.type == pygame.KEYUP:
-                if (event.key == pygame.K_LEFT or event.key == pygame.K_a) and player.change_x < 0:
-                    player.stop()
-                if (event.key == pygame.K_RIGHT or event.key == pygame.K_d) and player.change_x > 0:
-                    player.stop()
-                if event.key == pygame.K_UP or event.key == pygame.K_w:
-                    player.reset_jump()
-
-        #copy the background image to screen
-        screen.blit(background_image, background_position)
-
-        # Update the player.
-        active_sprite_list.update()
-
-        # Update items in the level
-        current_level.update()
-
-        # Calculate mechanics for each bullet
-        for bullet in bullet_list:
-
-            # See if it hit a block
-            #block_hit_list = pygame.sprite.spritecollide(bullet, block_list, True)  #True means the collided block in block_list will disappear on collision
-
-            # For each block hit, remove the bullet and add to the score
-            #for block in block_hit_list:
-            #    bullet_list.remove(bullet)
-            #    all_sprites_list.remove(bullet)
-            #    score += 1
-            #    print(score)
-
-            # Remove the bullet if it flies up off the screen
-            if bullet.rect.x < -10 or bullet.rect.x > SCREEN_WIDTH+10:
-                bullet_list.remove(bullet)
-                active_sprite_list.remove(bullet)
-
-        # Calculate coins collected
-        new_en = 2 #spawn an enemy every new_en coins collected
-        block_hit_list = pygame.sprite.spritecollide(player,coin_list,True)
-        for block in block_hit_list:
-            #spawn a new coin for each one collected
-            coin = newCoin(level,current_level)
-            coin_list.add(coin)
-            active_sprite_list.add(coin)
-
-            #spawn a new enemy for every new_en-th coin collected
-            if score % new_en == 0:
-                enemy = newEnemy(level,current_level,player)
-                enemy_list.add(enemy)
-                active_sprite_list.add(enemy)
-
-            score+=1
-
-        # Detect enemy collision
-        block_hit_list = pygame.sprite.spritecollide(player,enemy_list,False)
-        for block in block_hit_list:
-            pass
-            #done = True
-            #score-=1
-
-        # If the player gets near the right side, shift the world left (-x)
-        if player.rect.right >= right_thresh and current_level.world_shift_x >= DISPLAY_WIDTH - SCREEN_WIDTH:#right_thresh - SCREEN_WIDTH:
-            diff = player.rect.right - right_thresh
-            player.rect.right = right_thresh
-            current_level.shift_world(-diff,0)
-            background_position[0]-=diff
-
-            shiftSpriteList(coin_list,-diff,0)
-            shiftSpriteList(bullet_list,-diff,0)
-            shiftSpriteList(enemy_list,-diff,0)
-
-        # If the player gets near the left side, shift the world right (+x)
-        if player.rect.left <= left_thresh and current_level.world_shift_x <= 0:
-            diff = left_thresh - player.rect.left
-            player.rect.left = left_thresh
-            current_level.shift_world(diff,0)
-            background_position[0]+=diff
-
-            shiftSpriteList(coin_list,diff,0)
-            shiftSpriteList(bullet_list,diff,0)
-            shiftSpriteList(enemy_list,diff,0)
-
-        # If the player gets near the top, shift the world down (+y)
-        if player.rect.top <= up_thresh and current_level.world_shift_y <= 0:
-            diff = up_thresh - player.rect.top
-            player.rect.top = up_thresh
-            current_level.shift_world(0,diff)
-            background_position[1]+=diff
-
-            shiftSpriteList(coin_list,0,diff)
-            shiftSpriteList(bullet_list,0,diff)
-            shiftSpriteList(enemy_list,0,diff)
-
-        # If the player gets near the bottom, shift the world up (-y)
-        if player.rect.bottom >= down_thresh and current_level.world_shift_y >= DISPLAY_HEIGHT-SCREEN_HEIGHT:#down_thresh - SCREEN_HEIGHT:
-            diff = player.rect.bottom - down_thresh
-            player.rect.bottom = down_thresh
-            current_level.shift_world(0,-diff)
-            background_position[1]-=diff
-
-            shiftSpriteList(coin_list,0,-diff)
-            shiftSpriteList(bullet_list,0,-diff)
-            shiftSpriteList(enemy_list,0,-diff)
-
-
-        # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-        current_level.draw(screen)
-        active_sprite_list.draw(screen)
-
-        #debugging
-        font = pygame.font.Font(None, 50)
-        output_str = 'Score: ' + str(score)
-        text = font.render(output_str, True, BLACK)
-        screen.blit(text, [50,550])
-
-        if done:
-            font = pygame.font.Font(None,100)
-            output_str = 'GAME OVER'
-            text = font.render(output_str, True, BLACK)
-            screen.blit(text, [200,200])
-
-        # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
+        #process events
+        done = game.process_events()
+        #execute game logic (detect collisions, shift world, etc.)
+        game.run_logic()
+        #draw the current frame
+        game.display_frame(screen)
 
         # Limit to 60 frames per second
         clock.tick(60)
-
-        # Go ahead and update the screen with what we've drawn.
-        pygame.display.flip()
-
 
     # Be IDLE friendly. If you forget this line, the program will 'hang'
     # on exit.
