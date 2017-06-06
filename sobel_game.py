@@ -687,6 +687,7 @@ class Game(object):
             new_en = 2 #spawn an enemy every new_en coins collected
             block_hit_list = pygame.sprite.spritecollide(self.player,self.coin_list,True)
             for block in block_hit_list:
+                self.score+=1
                 #spawn a new coin for each one collected
                 coin = self.newCoin()
                 self.coin_list.add(coin)
@@ -698,11 +699,10 @@ class Game(object):
                     self.enemy_list.add(enemy)
                     self.active_sprite_list.add(enemy)
 
-                self.score+=1
-
             # Detect enemy collision
             block_hit_list = pygame.sprite.spritecollide(self.player,self.enemy_list,False)
             for block in block_hit_list:
+                #pass
                 self.game_over = True
 
             # If the player gets near the right side, shift the world left (-x)
@@ -770,6 +770,11 @@ class Game(object):
             output_str = 'Score: ' + str(self.score)
             text = font.render(output_str, True, BLACK)
             screen.blit(text, [50,550])
+
+            font = pygame.font.Font(None,50)
+            output_str = 'Enemies: ' + str(len(self.enemy_list))
+            text = font.render(output_str, True, BLACK)
+            screen.blit(text, [DISPLAY_WIDTH - text.get_width() - 50, 550])
 
         pygame.display.flip()
 
