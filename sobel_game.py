@@ -13,9 +13,9 @@ More advanced game mechanics and image manipulation by Cameron Schultz
 
 import pygame
 import numpy as np
-import scipy as sp
-from scipy import ndimage
-import matplotlib.pyplot as plt
+#import scipy as sp
+#from scipy import ndimage
+#import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from random import random
 from math import floor
@@ -222,6 +222,7 @@ class Enemy(pygame.sprite.Sprite):
         self.jumping = False
 
         self.health = health
+        self.speed = None
 
     def update(self):
         """Move the enemy"""
@@ -283,7 +284,7 @@ class Enemy(pygame.sprite.Sprite):
             self.j_count-=1
 
     def chase(self):
-        v=3 #enemy velocity
+        v=self.speed #enemy velocity
         diff_x = self.player.rect.x - self.rect.x   #difference in x position (pos = palyer to right)
         diff_y = self.rect.y - self.player.rect.y   #difference in y position (pos = player higher)
 
@@ -546,14 +547,26 @@ class Game(object):
 
         return coin
 
-    def newEnemy(self,health):
+    def newEnemy(self,health,speed):
         """generates a new enemy on a random platform in the level"""
         platform = self.level[floor(len(self.level)*random())]
-        enemy = Enemy(SCALE*(platform[2] + platform[0]*random())+self.current_level.world_shift_x,SCALE*(platform[3]-10)+self.current_level.world_shift_y,self.current_level,self.player,health)
+        #create new a new Enemy until it is sufficiently far from the player
+        while True:
+            enemy = Enemy(SCALE*(platform[2] + platform[0]*random())+self.current_level.world_shift_x,SCALE*(platform[3]-10)+self.current_level.world_shift_y,self.current_level,self.player,health)
+            enemy.speed = speed
+            p_pos = np.array((self.player.rect.x,self.player.rect.y))
+            e_pos = np.array((enemy.rect.x,enemy.rect.y))
+            #print(p_pos)
+            #print(e_pos)
+            if np.linalg.norm(p_pos-e_pos) > 100 and abs(p_pos[0]-e_pos[0]) > 50:
+                print(np.linalg.norm(p_pos-e_pos))
+                break
+
+        #print(type(enemy.speed),enemy.speed,speed)
         #print(type(enemy))
         return enemy
 
-    def __init__(self,level,mode,first_game):
+    def __init__(self,level,mode,first_game,init_pos,world_shift):
 
         self.score = 0
         self.game_over = False
@@ -562,7 +575,7 @@ class Game(object):
 
         self.background_image = pygame.image.load('images/desktop1.png').convert()
         self.background_image = pygame.transform.scale(self.background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
-        self.background_position = [0, 0]
+        self.background_position = [world_shift[0], world_shift[1]]
 
         #Create sprite lists
         self.player = Player()
@@ -574,12 +587,16 @@ class Game(object):
         # Set the current level
         self.current_level_no = 0
         self.current_level = self.level_list[self.current_level_no]
+        #self.current_level.world_shift_x, self.current_level.world_shift_y = world_shift
+        self.current_level.shift_world(world_shift[0],world_shift[1])
 
 
         self.active_sprite_list = pygame.sprite.Group()
         #print(type(self.active_sprite_list))
         #print(self.active_sprite_list)
         self.player.level = self.current_level
+
+        init_x,init_y = init_pos
 
         self.player.rect.x = init_x
         self.player.rect.y = init_y #SCREEN_HEIGHT - player.rect.height
@@ -598,12 +615,19 @@ class Game(object):
                 self.active_sprite_list.add(coin)
                 self.coin_list.add(coin)
 
+        #set enemy speed according to game mode
+        self.enemy_speed = 3
+        if self.mode == 1:
+            self.enemy_speed = 3
+        elif self.mode == 2:
+            self.enemy_speed = 1.5
+
         #list of each enemy
         self.enemy_list = pygame.sprite.Group()
 
         if not first_game:
         #enemy = Enemy(300,100,current_level,player)
-            enemy = self.newEnemy(20)
+            enemy = self.newEnemy(20,self.enemy_speed)
             self.enemy_list.add(enemy)
             self.active_sprite_list.add(enemy)
 
@@ -618,6 +642,11 @@ class Game(object):
             sprite.shift(shift_x,shift_y)
 
     def process_events(self):
+        #print((self.player.rect.x,self.player.rect.y))
+        #print(type(self.level))
+        p_pos = (self.player.rect.x,self.player.rect.y)
+        w_sh = (self.current_level.world_shift_x,self.current_level.world_shift_y)
+        #w_sh = (self.level.world_shift_x,self.level.world_shift_y)
         """processes events such as key strokes, mouse clicks, and quit commands"""
         #print(self.mode)
         for event in pygame.event.get():
@@ -637,24 +666,31 @@ class Game(object):
                     if event.key == pygame.K_1:
                         #print("game started")
                         #self.first_game_started = True
-                        self.mode = 1
+                        #self.mode = 1
+                        self.__init__(self.level,1,False,p_pos,w_sh)
 
-                        enemy = self.newEnemy(20)
-                        self.enemy_list.add(enemy)
-                        self.active_sprite_list.add(enemy)
+                        #enemy = self.newEnemy(20,self.enemy_speed)
+                        #self.enemy_list.add(enemy)
+                        #self.active_sprite_list.add(enemy)
                     elif event.key == pygame.K_2:
-                        self.first_game_started = True
-                        self.mode = 2
+                        #self.first_game_started = True
+                        #self.mode = 2
+                        self.__init__(self.level,2,False,p_pos,w_sh)
 
-                        enemy = self.newEnemy(20)
-                        self.enemy_list.add(enemy)
-                        self.active_sprite_list.add(enemy)
+                        #enemy = self.newEnemy(20,self.enemy_speed)
+                        #self.enemy_list.add(enemy)
+                        #self.active_sprite_list.add(enemy)
+                reset_keys = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT,\
+                            pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d]
 
                 if self.game_over:
+                    if event.key in reset_keys:
+                        self.__init__(self.level,0,True,p_pos,w_sh)
+
                     if event.key == pygame.K_1:
-                        self.__init__(self.level,1,False)
+                        self.__init__(self.level,1,False,p_pos,w_sh)
                     elif event.key == pygame.K_2:
-                        self.__init__(self.level,2,False)
+                        self.__init__(self.level,2,False,p_pos,w_sh)
 
                 #navigate the player using the arrow keys or WASD
                 if event.key == pygame.K_LEFT or event.key == pygame.K_a:
@@ -681,7 +717,7 @@ class Game(object):
                     bullet = Bullet(10)
                     # Set the bullet so it is where the player is
                     bullet.rect.x = self.player.rect.x
-                    bullet.rect.y = self.player.rect.y
+                    bullet.rect.y = self.player.rect.y + 7
                     # Add the bullet to the lists
                     self.active_sprite_list.add(bullet)
                     self.bullet_list.add(bullet)
@@ -729,11 +765,11 @@ class Game(object):
                     self.active_sprite_list.remove(bullet)
                     block.health -= 10
                     if block.health < 0:
-                        print("enemy killed")
+                        #print("enemy killed")
                         self.enemy_list.remove(block)
                         self.active_sprite_list.remove(block)
 
-                        enemy1,enemy2 = self.newEnemy(20+self.score),self.newEnemy(20+self.score)
+                        enemy1,enemy2 = self.newEnemy(20+self.score,self.enemy_speed),self.newEnemy(20+self.score,self.enemy_speed)
 
                         self.enemy_list.add(enemy1)
                         self.enemy_list.add(enemy2)
@@ -765,7 +801,7 @@ class Game(object):
 
                 #spawn a new enemy for every new_en-th coin collected
                 if self.score % new_en == 0 and self.first_game_started:
-                    enemy = self.newEnemy(20)
+                    enemy = self.newEnemy(20,self.enemy_speed)
                     self.enemy_list.add(enemy)
                     self.active_sprite_list.add(enemy)
 
@@ -828,13 +864,15 @@ class Game(object):
             font = pygame.font.Font(None,75)
             text1 = font.render("Game Over", True, BLACK)
             center_x1 = (DISPLAY_WIDTH // 2) - (text1.get_width() // 2)
-            center_y = (DISPLAY_HEIGHT // 2) - (text1.get_height() // 2)
+            #center_y = DISPLAY_HEIGHT // 3
 
             text2 = font.render("Press 1 for Mode 1", True, BLACK)
             center_x2 = (DISPLAY_WIDTH // 2) - (text2.get_width() // 2)
 
             text3 = font.render("Press 2 for Mode 2", True, BLACK)
             center_x3 = (DISPLAY_WIDTH // 2) - (text3.get_width() // 2)
+
+            center_y = (DISPLAY_HEIGHT // 2) - ((text1.get_height() + text2.get_height() + text3.get_height()) // 2) - 50
 
             screen.blit(text1, [center_x1,center_y])#[center_x, center_y])
             screen.blit(text2, [center_x2, center_y + text1.get_height() + 20])
@@ -861,7 +899,7 @@ class Game(object):
             font = pygame.font.Font(None,75)
             text1 = font.render("Sobel Game", True, BLACK)
             center_x1 = (DISPLAY_WIDTH // 2) - (text1.get_width() // 2)
-            center_y = (DISPLAY_HEIGHT // 2) - (text1.get_height() // 2)
+            center_y = DISPLAY_HEIGHT // 3
 
             text2 = font.render("Press 1 for Mode 1", True, BLACK)
             center_x2 = (DISPLAY_WIDTH // 2) - (text2.get_width() // 2)
@@ -906,7 +944,7 @@ def main():
     clock = pygame.time.Clock()
 
     #iniitialize the Game class
-    game = Game(level,0,True)
+    game = Game(level,0,True,(init_x,init_y),(0,0))   #'True' in 3rd field lets a 'blank game' run - i.e. home screen
 
     # -------- Main Program Loop -----------
     while not done:
