@@ -19,15 +19,28 @@ import numpy as np
 import matplotlib.image as mpimg
 from random import random
 from math import floor
+from PIL import ImageGrab
+import os
 
 
 def getImage():
     """read an image, crop it, and return it along with its dimensions
     in the future, this method will take a screenshot and read that image in"""
-    img = mpimg.imread('images/desktop1.png')
+    #img = mpimg.imread('images/desktop1.png')  #read default image
+    #img = np.asarray(ImageGrab.grab())  #take screenshot and read that in
+    try:
+        if os.path.isfile('images/temp.bmp'):
+            os.unlink('images/temp.bmp')
+        #elif os.path.isdir(file_path): shutil.rmtree(file_path)
+    except Exception as e:
+        print(e)
+    img_png = ImageGrab.grab()
+    img = np.asarray(img_png)
+    img_png.save('images/temp.bmp')
+    #print(type(img))
     rows,cols,color = img.shape
 
-    return img,rows,cols
+    return img_png,img,rows,cols
 
 # Global constants
 
@@ -44,7 +57,7 @@ SCALE = 2
 
 # Screen dimensions
 #get the images dimensions --> will be moved to own class in future
-img,SCREEN_HEIGHT,SCREEN_WIDTH = getImage()
+img_png,img,SCREEN_HEIGHT,SCREEN_WIDTH = getImage()
 
 #scaled dimensions of the image
 SCREEN_HEIGHT = SCALE*SCREEN_HEIGHT
@@ -559,7 +572,7 @@ class Game(object):
             #print(p_pos)
             #print(e_pos)
             if np.linalg.norm(p_pos-e_pos) > 100 and abs(p_pos[0]-e_pos[0]) > 50:
-                print(np.linalg.norm(p_pos-e_pos))
+                #print(np.linalg.norm(p_pos-e_pos))
                 break
 
         #print(type(enemy.speed),enemy.speed,speed)
@@ -573,7 +586,8 @@ class Game(object):
 
         self.level = level
 
-        self.background_image = pygame.image.load('images/desktop1.png').convert()
+        #self.background_image = pygame.image.load('images/desktop1.png').convert()
+        self.background_image = pygame.image.load('images/temp.bmp').convert()
         self.background_image = pygame.transform.scale(self.background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
         self.background_position = [world_shift[0], world_shift[1]]
 
