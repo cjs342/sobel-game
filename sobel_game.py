@@ -461,92 +461,94 @@ class Level_01(Level):
         block.player = self.player
         self.platform_list.add(block)
 
+class ImageProcessing(object):
 
-#Image processing functions will be moved to own class in future
-def rgb2gray(rgb):
-    """converts an RGB image to grayscale using the luma coding formula:
-    Y = 0.299R + 0.587G + 0.114B"""
-    return np.dot(rgb[...,:3], [0.299,0.587,0.114])
 
-#Image processing functions will be moved to own class in future
-def sobel(img):
-    """apply the Sobel filter to detect edges (grayscale only)"""
-    if len(img.shape)>2:
-        raise ValueError('arg must be 2 dimensional (grayscale)')
-        return
-    #get img dimensions
-    rows,cols = img.shape
+    #Image processing functions will be moved to own class in future
+    def rgb2gray(self,rgb):
+        """converts an RGB image to grayscale using the luma coding formula:
+        Y = 0.299R + 0.587G + 0.114B"""
+        return np.dot(rgb[...,:3], [0.299,0.587,0.114])
 
-    c=4 #Sobel coefficient
+    #Image processing functions will be moved to own class in future
+    def sobel(self,img):
+        """apply the Sobel filter to detect edges (grayscale only)"""
+        if len(img.shape)>2:
+            raise ValueError('arg must be 2 dimensional (grayscale)')
+            return
+        #get img dimensions
+        rows,cols = img.shape
 
-    #create new blank image of same size
-    sb = np.zeros((rows,cols))
+        c=4 #Sobel coefficient
 
-    #iterate over img, one pixel in from edge
-    for i in range(1,rows-1):
-        for j in range(1,cols-1):
-            sx = 0#(img[i-1][j+1] + c*img[i][j+1] + img[i+1][j+1]) - (img[i-1][j-1] + c*img[i][j-1] + img[i+1][j-1])
-            sy = (img[i-1][j-1] + c*img[i-1][j] + img[i-1][j+1]) - (img[i+1][j-1] + c*img[i+1][j] + img[i+1][j+1])
-            m = (sx**2 + sy**2)**(1/2)
+        #create new blank image of same size
+        sb = np.zeros((rows,cols))
 
-            sb[i][j]=m/6
+        #iterate over img, one pixel in from edge
+        for i in range(1,rows-1):
+            for j in range(1,cols-1):
+                sx = 0#(img[i-1][j+1] + c*img[i][j+1] + img[i+1][j+1]) - (img[i-1][j-1] + c*img[i][j-1] + img[i+1][j-1])
+                sy = (img[i-1][j-1] + c*img[i-1][j] + img[i-1][j+1]) - (img[i+1][j-1] + c*img[i+1][j] + img[i+1][j+1])
+                m = (sx**2 + sy**2)**(1/2)
 
-    return sb
+                sb[i][j]=m/6
 
-#Image processing functions will be moved to own class in future
-def grayHorizontal(img):
-    """colors the horizontal lines in an image white and blacks the rest
-    input 2-D array"""
-    rows,cols=img.shape
-    img_horiz=np.zeros(img.shape)
-    for row in range(rows):
-        for i in range(cols-100):
-            x=img[row][i]
-            x_1=img[row][i+1]
-            count=1
-            while x>0.1 and x==x_1 and count<100:
-                count+=1
-                x=x_1
-                x_1 = img[row][i+count]
-            #color line white if same color detected for 100 pixels
-            if count==100:
-                i+=1
-                for j in range(100):
-                    img_horiz[row][i+j]=1
+        return sb
 
-    return img_horiz
+    #Image processing functions will be moved to own class in future
+    def grayHorizontal(self,img):
+        """colors the horizontal lines in an image white and blacks the rest
+        input 2-D array"""
+        rows,cols=img.shape
+        img_horiz=np.zeros(img.shape)
+        for row in range(rows):
+            for i in range(cols-100):
+                x=img[row][i]
+                x_1=img[row][i+1]
+                count=1
+                while x>0.1 and x==x_1 and count<100:
+                    count+=1
+                    x=x_1
+                    x_1 = img[row][i+count]
+                #color line white if same color detected for 100 pixels
+                if count==100:
+                    i+=1
+                    for j in range(100):
+                        img_horiz[row][i+j]=1
 
-#Image processing functions will be moved to own class in future
-def getPlatforms(img):
-    """returns a list of platforms (defined by width, height, x, y) given a b/w image
-    platforms are created wherever whitespace is detected. used with the output of grayHorizontal method"""
-    rows,cols = img.shape
-    #print(rows,cols)
-    platforms = []
-    for r in range(rows):
-        for c in range(cols):
-            #detect a white pixel
-            if img[r][c] == 1:
-                img[r][c] = 0   #each time a white pixel is visited, set it to black so it is not double counted
-                rp = r+1
-                cp=c+1
-                #get height by counting the subsequent rows (same col) that are also white
-                while rp < rows and img[rp][c] == 1:
-                    img[rp][c] = 0
-                    rp+=1
-                #get widtch by counting the subsequent cols (same row) that are also white
-                while cp < cols and img[r][cp] == 1:
-                    img[r][cp] = 0
-                    cp+=1
-                #color all the remaining white pixels in the platform white using the width and height
-                for i in range(1,rp-r):
-                    for j in range(1,cp-c):
-                        img[r+i][c+j] = 0
+        return img_horiz
 
-                #width, height, x, y
-                platforms.append([cp-c,rp-r,c,r])
+    #Image processing functions will be moved to own class in future
+    def getPlatforms(self,img):
+        """returns a list of platforms (defined by width, height, x, y) given a b/w image
+        platforms are created wherever whitespace is detected. used with the output of grayHorizontal method"""
+        rows,cols = img.shape
+        #print(rows,cols)
+        platforms = []
+        for r in range(rows):
+            for c in range(cols):
+                #detect a white pixel
+                if img[r][c] == 1:
+                    img[r][c] = 0   #each time a white pixel is visited, set it to black so it is not double counted
+                    rp = r+1
+                    cp=c+1
+                    #get height by counting the subsequent rows (same col) that are also white
+                    while rp < rows and img[rp][c] == 1:
+                        img[rp][c] = 0
+                        rp+=1
+                    #get widtch by counting the subsequent cols (same row) that are also white
+                    while cp < cols and img[r][cp] == 1:
+                        img[r][cp] = 0
+                        cp+=1
+                    #color all the remaining white pixels in the platform white using the width and height
+                    for i in range(1,rp-r):
+                        for j in range(1,cp-c):
+                            img[r+i][c+j] = 0
 
-    return platforms
+                    #width, height, x, y
+                    platforms.append([cp-c,rp-r,c,r])
+
+        return platforms
 
 class Game(object):
 
@@ -930,17 +932,18 @@ class Game(object):
 
 def main():
     """Image Reading and processing. Will move to separate class in future"""
+    im_pr = ImageProcessing()
     #convert to grayscale
-    img_gray = rgb2gray(img)
+    img_gray = im_pr.rgb2gray(img)
 
     #pass through the sobel filter
-    img_sb = sobel(img_gray)
+    img_sb = im_pr.sobel(img_gray)
 
     #highlight horizontal platforms
-    img_horiz = grayHorizontal(img_sb)
+    img_horiz = im_pr.grayHorizontal(img_sb)
 
     #get level platforms
-    level = getPlatforms(img_horiz)
+    level = im_pr.getPlatforms(img_horiz)
 
     """ Main Program """
     pygame.init()
