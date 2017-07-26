@@ -21,6 +21,9 @@ YELLOW = (255, 255, 0)
 #from image_processing import ImageProcessing
 
 class Game(object):
+    """Game class contains all the logic for updating game state between frames.
+    A new Game Object is created whenever a new game is started (on startup and from
+    the main game menu)"""
 
     def newCoin(self):
         """generates a new coin on a random platform in the level"""
@@ -41,14 +44,10 @@ class Game(object):
             enemy.speed = speed
             p_pos = np.array((self.player.rect.x,self.player.rect.y))
             e_pos = np.array((enemy.rect.x,enemy.rect.y))
-            #print(p_pos)
-            #print(e_pos)
+
             if np.linalg.norm(p_pos-e_pos) > 100 and abs(p_pos[0]-e_pos[0]) > 50:
-                #print(np.linalg.norm(p_pos-e_pos))
                 break
 
-        #print(type(enemy.speed),enemy.speed,speed)
-        #print(type(enemy))
         return enemy
 
     def __init__(self,level,mode,first_game,init_pos,world_shift,SCREEN_DIM,DISPLAY_DIM,thresh,SCALE):
@@ -79,19 +78,16 @@ class Game(object):
         # Set the current level
         self.current_level_no = 0
         self.current_level = self.level_list[self.current_level_no]
-        #self.current_level.world_shift_x, self.current_level.world_shift_y = world_shift
         self.current_level.shift_world(world_shift[0],world_shift[1])
 
 
         self.active_sprite_list = pygame.sprite.Group()
-        #print(type(self.active_sprite_list))
-        #print(self.active_sprite_list)
         self.player.level = self.current_level
 
         init_x,init_y = init_pos
 
         self.player.rect.x = init_x
-        self.player.rect.y = init_y #self.SCREEN_HEIGHT - player.rect.height
+        self.player.rect.y = init_y
         self.active_sprite_list.add(self.player)
 
         self.mode=mode
@@ -118,7 +114,6 @@ class Game(object):
         self.enemy_list = pygame.sprite.Group()
 
         if not first_game:
-        #enemy = Enemy(300,100,current_level,player)
             enemy = self.newEnemy(20,self.enemy_speed)
             self.enemy_list.add(enemy)
             self.active_sprite_list.add(enemy)
@@ -134,51 +129,30 @@ class Game(object):
             sprite.shift(shift_x,shift_y)
 
     def process_events(self):
-        #print((self.player.rect.x,self.player.rect.y))
-        #print(type(self.level))
+        """processes events such as key strokes, mouse clicks, and quit commands"""
         p_pos = (self.player.rect.x,self.player.rect.y)
         w_sh = (self.current_level.world_shift_x,self.current_level.world_shift_y)
-        #w_sh = (self.level.world_shift_x,self.level.world_shift_y)
-        """processes events such as key strokes, mouse clicks, and quit commands"""
-        #print(self.mode)
         for event in pygame.event.get():
-            #print(event)
-            #if event.type == pygame.MOUSEBUTTONDOWN:
-
             if event.type == pygame.QUIT:
                 return True
-            #restart the game is game_over is True and the mouse is clicked
-            #if event.type == pygame.MOUSEBUTTONDOWN:
-            #    if self.game_over:
-            #        self.__init__(self.level,0)
-
             if event.type == pygame.KEYDOWN:
                 #start the game with the specified game mode code
                 if not self.first_game_started:
+                    #game mode 1 (coin chase)
                     if event.key == pygame.K_1:
-                        #print("game started")
-                        #self.first_game_started = True
-                        #self.mode = 1
                         self.__init__(self.level,1,False,p_pos,w_sh,(self.SCREEN_HEIGHT,self.SCREEN_WIDTH),(self.DISPLAY_HEIGHT,self.DISPLAY_WIDTH),(self.right_thresh,self.left_thresh,self.up_thresh,self.down_thresh),self.SCALE)
-
-                        #enemy = self.newEnemy(20,self.enemy_speed)
-                        #self.enemy_list.add(enemy)
-                        #self.active_sprite_list.add(enemy)
+                    #game mode 2 (wave survival)
                     elif event.key == pygame.K_2:
-                        #self.first_game_started = True
-                        #self.mode = 2
                         self.__init__(self.level,2,False,p_pos,w_sh,(self.SCREEN_HEIGHT,self.SCREEN_WIDTH),(self.DISPLAY_HEIGHT,self.DISPLAY_WIDTH),(self.right_thresh,self.left_thresh,self.up_thresh,self.down_thresh),self.SCALE)
 
-                        #enemy = self.newEnemy(20,self.enemy_speed)
-                        #self.enemy_list.add(enemy)
-                        #self.active_sprite_list.add(enemy)
                 reset_keys = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT,\
                             pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d]
 
+                #after a round ends, start a new blank game. this allows the player to navigate the
+                #map without starting a new round
                 if self.game_over:
                     if event.key in reset_keys:
                         self.__init__(self.level,0,True,p_pos,w_sh,(self.SCREEN_HEIGHT,self.SCREEN_WIDTH),(self.DISPLAY_HEIGHT,self.DISPLAY_WIDTH),(self.right_thresh,self.left_thresh,self.up_thresh,self.down_thresh),self.SCALE)
-
                     if event.key == pygame.K_1:
                         self.__init__(self.level,1,False,p_pos,w_sh,(self.SCREEN_HEIGHT,self.SCREEN_WIDTH),(self.DISPLAY_HEIGHT,self.DISPLAY_WIDTH),(self.right_thresh,self.left_thresh,self.up_thresh,self.down_thresh),self.SCALE)
                     elif event.key == pygame.K_2:
@@ -191,9 +165,11 @@ class Game(object):
                     self.player.go_right()
                 if event.key == pygame.K_UP or event.key == pygame.K_w:
                     self.player.jump()
+
                 #reset the player's position to the initial position. Used for testing.
                 if event.key == pygame.K_r:
                     self.player.reset()
+
                 #create bullet if in game mode 2
                 if (event.key == pygame.K_z or event.key == pygame.K_COMMA) and self.mode==2:
                     # Fire a bullet if the user clicks the mouse button
@@ -227,8 +203,6 @@ class Game(object):
 
     def run_logic(self):
         """Main game logic"""
-        #print("run logic")
-        #print(self.enemy_list)
         if not self.game_over:
             #generate coins if still in start menu and game mode 1 chosen
             if self.mode == 1 and not self.first_game_started:
@@ -256,8 +230,8 @@ class Game(object):
                     self.bullet_list.remove(bullet)
                     self.active_sprite_list.remove(bullet)
                     block.health -= 10
+                    #when an enemy runs out of health, remove it and replace it with 2 new enemies
                     if block.health < 0:
-                        #print("enemy killed")
                         self.enemy_list.remove(block)
                         self.active_sprite_list.remove(block)
 
@@ -269,11 +243,6 @@ class Game(object):
                         self.active_sprite_list.add(enemy2)
 
                         self.score += 1
-
-                        #xpass
-
-                #    score += 1
-                #    print(score)
 
                 # Remove the bullet if it flies up off the screen
                 if bullet.rect.x < -10 or bullet.rect.x > self.SCREEN_WIDTH+10:
@@ -297,11 +266,9 @@ class Game(object):
                     self.enemy_list.add(enemy)
                     self.active_sprite_list.add(enemy)
 
-            # Detect enemy collision
-            #print(len(self.enemy_list))
+            # Detect enemy collision with Player
             block_hit_list = pygame.sprite.spritecollide(self.player,self.enemy_list,False)
             for block in block_hit_list:
-                #pass
                 self.game_over = True
 
             # If the player gets near the right side, shift the world left (-x)
@@ -356,7 +323,6 @@ class Game(object):
             font = pygame.font.Font(None,75)
             text1 = font.render("Game Over", True, BLACK)
             center_x1 = (self.DISPLAY_WIDTH // 2) - (text1.get_width() // 2)
-            #center_y = self.DISPLAY_HEIGHT // 3
 
             text2 = font.render("Press 1 for Mode 1", True, BLACK)
             center_x2 = (self.DISPLAY_WIDTH // 2) - (text2.get_width() // 2)
@@ -386,6 +352,7 @@ class Game(object):
             text = font.render(output_str, True, BLACK)
             screen.blit(text, [self.DISPLAY_WIDTH - text.get_width() - 50, 550])
 
+        #pre-game screen
         if not self.first_game_started:
             #print("game menu")
             font = pygame.font.Font(None,75)
@@ -401,7 +368,7 @@ class Game(object):
 
             center_y = (self.DISPLAY_HEIGHT // 2) - ((text1.get_height() + text2.get_height() + text3.get_height()) // 2) - 50
 
-            screen.blit(text1, [center_x1,center_y])#[center_x, center_y])
+            screen.blit(text1, [center_x1,center_y])
             screen.blit(text2, [center_x2, center_y + text1.get_height() + 20])
             screen.blit(text3, [center_x3, center_y + text1.get_height() + text2.get_height() +40])
 

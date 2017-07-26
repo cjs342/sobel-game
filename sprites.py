@@ -8,13 +8,11 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 
-#SCALE = 2
 
 class Player(pygame.sprite.Sprite):
     """ This class represents the bar at the bottom that the player
         controls. """
 
-    # -- Methods
     def __init__(self,SCREEN_DIM):
         """ Constructor function """
 
@@ -68,19 +66,6 @@ class Player(pygame.sprite.Sprite):
         if self.change_x != 0:
             self.rect.x += self.change_x
 
-        #Detect collisions if UP/DOWN keys not pressed and we aren't moving up
-        """
-        if not key[pygame.K_DOWN] and not key[pygame.K_UP] and self.change_y>=0:
-            block_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
-            for block in block_hit_list:
-                # If we are moving right,
-                # set our right side to the left side of the item we hit
-                if self.change_x > 0:
-                    self.rect.right = block.rect.left
-                elif self.change_x < 0:
-                    # Otherwise if we are moving left, do the opposite.
-                    self.rect.left = block.rect.right
-         """
     def calc_grav(self):
         """ Calculate effect of gravity. """
         key=pygame.key.get_pressed()
@@ -110,7 +95,6 @@ class Player(pygame.sprite.Sprite):
 
         # move down a bit and see if there is a platform below us.
         # Move down 3 pixels to alleviate 'hack' in up/down detection
-        #FIX THIS
         self.rect.y += 3
         platform_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
         self.rect.y -= 3
@@ -216,12 +200,10 @@ class Enemy(pygame.sprite.Sprite):
         diff_y = self.player.rect.y - self.rect.y #difference in position
         #if close to player vertically, end jump
         if abs(diff_y) < 10:
-            #self.jumping = False
             self.j_count = 0
 
         if self.change_y == 0:
             self.change_y = 1
-        #elif not self.jumping or self.j_count == 0: #abs(diff_y) < 10 or self.j_count == 0:
         elif self.j_count == 0:
             self.change_y += .25
 
@@ -267,8 +249,6 @@ class Enemy(pygame.sprite.Sprite):
 
         # move down a bit and see if there is a platform below us.
         # Move down 3 pixels to alleviate 'hack' in up/down detection
-        #FIX THIS
-
         self.rect.y += 3
         platform_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
         self.rect.y -= 3
@@ -371,8 +351,6 @@ class Level(object):
         for platform in self.platform_list:
             platform.rect.x += shift_x
             platform.rect.y += shift_y
-
-
 
 class Level_01(Level):
     """ Definition for level 1. """

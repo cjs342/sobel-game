@@ -20,7 +20,7 @@ SCALE = 2
 im_pr = ImageProcessing()
 
 # Screen dimensions
-#get the images dimensions --> will be moved to own class in future
+#get the images dimensions
 img_png,img,SCREEN_HEIGHT,SCREEN_WIDTH = im_pr.getImage()
 
 #scaled dimensions of the image
@@ -62,7 +62,7 @@ def main():
     size = [DISPLAY_WIDTH,DISPLAY_HEIGHT]
     screen = pygame.display.set_mode(size)
 
-    pygame.display.set_caption("Platformer Jumper")
+    pygame.display.set_caption("Sobel Game")
 
     # Loop until the user clicks the close button.
     done = False

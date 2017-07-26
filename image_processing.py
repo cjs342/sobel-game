@@ -10,23 +10,25 @@ from sprites import Platform
 from sprites import Bullet
 from sprites import Coin
 
-#from game import Game
 
 class ImageProcessing(object):
+    """Class containing the image processing functions used to generate the level"""
 
     def getImage(self):
         """read an image, crop it, and return it along with its dimensions
         in the future, this method will take a screenshot and read that image in"""
+
+        #delete existing temp.bmp so a new screenshot can be taken
         try:
             if os.path.isfile('images/temp.bmp'):
                 os.unlink('images/temp.bmp')
-            #elif os.path.isdir(file_path): shutil.rmtree(file_path)
         except Exception as e:
             print(e)
+
+        #take a screenshot and save it
         img_png = ImageGrab.grab()
         img = np.asarray(img_png)
         img_png.save('images/temp.bmp')
-        #print(type(img))
         rows,cols,color = img.shape
 
         return img_png,img,rows,cols
@@ -51,7 +53,7 @@ class ImageProcessing(object):
         #create new blank image of same size
         sb = np.zeros((rows,cols))
 
-        #iterate over img, one pixel in from edge
+        #perform sobel edge detection in y direction (detect horizontal edges)
         for i in range(1,rows-1):
             for j in range(1,cols-1):
                 sx = 0#(img[i-1][j+1] + c*img[i][j+1] + img[i+1][j+1]) - (img[i-1][j-1] + c*img[i][j-1] + img[i+1][j-1])
@@ -73,24 +75,23 @@ class ImageProcessing(object):
                 x=img[row][i]
                 x_1=img[row][i+1]
                 count=1
+                #count the number of identical adjacent pixels
                 while x>0.1 and x==x_1 and count<100:
                     count+=1
                     x=x_1
                     x_1 = img[row][i+count]
                 #color line white if same color detected for 100 pixels
                 if count==100:
-                    i+=1
                     for j in range(100):
                         img_horiz[row][i+j]=1
+                    i+=100
 
         return img_horiz
 
-    #Image processing functions will be moved to own class in future
     def getPlatforms(self,img):
         """returns a list of platforms (defined by width, height, x, y) given a b/w image
         platforms are created wherever whitespace is detected. used with the output of grayHorizontal method"""
         rows,cols = img.shape
-        #print(rows,cols)
         platforms = []
         for r in range(rows):
             for c in range(cols):
