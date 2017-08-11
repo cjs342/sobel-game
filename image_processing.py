@@ -52,39 +52,63 @@ class ImageProcessing(object):
 
         #create new blank image of same size
         sb = np.zeros((rows,cols))
+        horiz = np.zeros((rows,cols))
 
-        #perform sobel edge detection in y direction (detect horizontal edges)
+        #calls = 0 #benchmarking
+        #perform sobel edge detection in y direction (detect horizontal edges) and highlight horizontal edges
         for i in range(1,rows-1):
+            count = 0
             for j in range(1,cols-1):
+
+                #pass the image through the sobel filter
                 sx = 0#(img[i-1][j+1] + c*img[i][j+1] + img[i+1][j+1]) - (img[i-1][j-1] + c*img[i][j-1] + img[i+1][j-1])
                 sy = (img[i-1][j-1] + c*img[i-1][j] + img[i-1][j+1]) - (img[i+1][j-1] + c*img[i+1][j] + img[i+1][j+1])
                 m = (sx**2 + sy**2)**(1/2)
 
                 sb[i][j]=m/6
 
-        return sb
+                """Below code merges sobel() and (old) grayHorizontal()"""
+                #once index clears the filter, look for consecutive pixels
+                if j>2:
+                    k=j-2 #new column index so horizontal doesn't overlap with sobel
+                    #detect same value adjacent pixels
+                    if sb[i][k]==sb[i][k-1] and sb[i][k]>0.1:
+                        count+=1
+                    #if adjacent pixels are different value, reset count
+                    else:
+                        count = 0
+                    #once 100 consecutive same value pixels are detected, color the platform-tracking image white
+                    if count == 100:
+                        count = 0
+                        horiz[i][k-99:k+1] = [1]*100
+                #above code merges grayHorizontal
 
+        return horiz#sb
+
+    """grayHorizontal() merged into sobel(). Saves about ~1 second (on my machine) of processing time."""
     #Image processing functions will be moved to own class in future
     def grayHorizontal(self,img):
         """colors the horizontal lines in an image white and blacks the rest
         input 2-D array"""
         rows,cols=img.shape
         img_horiz=np.zeros(img.shape)
-        for row in range(rows):
-            for i in range(cols-100):
-                x=img[row][i]
-                x_1=img[row][i+1]
+
+        for i in range(rows):
+            for j in range(cols-100):
+
+                x=img[i][j]
+                x_next=img[i][j+1]
                 count=1
                 #count the number of identical adjacent pixels
-                while x>0.1 and x==x_1 and count<100:
+                while x>0.1 and x==x_next and count<100:
                     count+=1
-                    x=x_1
-                    x_1 = img[row][i+count]
+                    x=x_next
+                    x_next = img[i][j+count]
                 #color line white if same color detected for 100 pixels
                 if count==100:
-                    for j in range(100):
-                        img_horiz[row][i+j]=1
-                    i+=100
+                    for k in range(100):
+                        img_horiz[i][j+k]=1
+                    j+=100
 
         return img_horiz
 
