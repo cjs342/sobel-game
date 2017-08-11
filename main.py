@@ -42,7 +42,6 @@ down_thresh = DISPLAY_HEIGHT-150
 
 def main():
     """Image Reading and processing. Will move to separate class in future"""
-
     #convert to grayscale
     img_gray = im_pr.rgb2gray(img)
 
@@ -50,10 +49,10 @@ def main():
     img_sb = im_pr.sobel(img_gray)
 
     #highlight horizontal platforms
-    img_horiz = im_pr.grayHorizontal(img_sb)
+    #img_horiz = im_pr.grayHorizontal(img_sb)
 
     #get level platforms
-    level = im_pr.getPlatforms(img_horiz)
+    level = im_pr.getPlatforms(img_sb)
 
     """ Main Program """
     pygame.init()
