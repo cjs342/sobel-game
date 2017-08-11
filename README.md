@@ -53,7 +53,7 @@ This file contains the class definitions for the various sprites used to represe
 
 ### image_processing.py
 
-This file contains the five functions that process an image to generate the level. They are: getImage(), rgb2gray(), sobel(), grayHorizontal(), and getPlatforms().
+This file contains the four functions that process an image to generate the level. They are: getImage(), rgb2gray(), sobel(), and getPlatforms().
 
 #### getImage()
 
@@ -65,12 +65,14 @@ Converts an rgb image to grayscale.
 
 #### sobel()
 
-Passes a grayscale image through the Sobel edge-detection filter. 
+Passes a grayscale image through the Sobel edge-detection filter. As the image is traversed, looks for consecutive runs of 100 same-colored pixels after Sobel filtering and colors them white. These will become the platforms for the level.
 
-#### grayHorizontal()
-
-Colors the horizontal lines (those at least 100 pixels of the same color) white, and the rest black. The horizontal lines in the Sobel image correspond to the detected edges in the screenshot, so this function highlights them further.
+Combined with the now defunct grayHorizontal() function, saving an array traversal.
 
 #### getPlatforms()
 
 Creates platforms on all white pixels in the image.
+
+#### grayHorizontal() (NO LONGER USED)
+
+Colors the horizontal lines (those at least 100 pixels of the same color) white, and the rest black. The horizontal lines in the Sobel image correspond to the detected edges in the screenshot, so this function highlights them further.
