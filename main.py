@@ -48,9 +48,6 @@ def main():
     #pass through the sobel filter
     img_sb = im_pr.sobel(img_gray)
 
-    #highlight horizontal platforms
-    #img_horiz = im_pr.grayHorizontal(img_sb)
-
     #get level platforms
     level = im_pr.getPlatforms(img_sb)
 
