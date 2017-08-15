@@ -54,36 +54,37 @@ class ImageProcessing(object):
         sb = np.zeros((rows,cols))
         horiz = np.zeros((rows,cols))
 
-        #calls = 0 #benchmarking
+        plat = 100  #length of pixel run that we will call a platform
+        gap = 10     #only evaluate every gap-th column cell to save time. must be divisible by plat and > 0
+
         #perform sobel edge detection in y direction (detect horizontal edges) and highlight horizontal edges
         for i in range(1,rows-1):
             count = 0
             for j in range(1,cols-1):
+                if j%gap == 0:
+                    #pass the image through the sobel filter
+                    sx = 0#(img[i-1][j+1] + c*img[i][j+1] + img[i+1][j+1]) - (img[i-1][j-1] + c*img[i][j-1] + img[i+1][j-1])
+                    sy = (img[i-1][j-1] + c*img[i-1][j] + img[i-1][j+1]) - (img[i+1][j-1] + c*img[i+1][j] + img[i+1][j+1])
+                    m = (sx**2 + sy**2)**(1/2)
 
-                #pass the image through the sobel filter
-                sx = 0#(img[i-1][j+1] + c*img[i][j+1] + img[i+1][j+1]) - (img[i-1][j-1] + c*img[i][j-1] + img[i+1][j-1])
-                sy = (img[i-1][j-1] + c*img[i-1][j] + img[i-1][j+1]) - (img[i+1][j-1] + c*img[i+1][j] + img[i+1][j+1])
-                m = (sx**2 + sy**2)**(1/2)
+                    sb[i][j]=m/6
 
-                sb[i][j]=m/6
+                    """Below code merges sobel() and (old) grayHorizontal()"""
+                    #once index clears the filter, look for consecutive pixels
+                    if j>2:
+                        k=j-max(2,gap) #new column index so horizontal doesn't overlap with sobel
+                        #detect same value adjacent pixels
+                        if sb[i][k]==sb[i][k-gap] and sb[i][k]>0.1:
+                            count+=1
+                        #if adjacent pixels are different value, reset count
+                        else:
+                            count = 0
+                        #once plat consecutive same value pixels are detected, color the platform-tracking image white
+                        if count == plat/gap:
+                            count = 0
+                            horiz[i][k-plat+1:k+1] = [1]*plat
 
-                """Below code merges sobel() and (old) grayHorizontal()"""
-                #once index clears the filter, look for consecutive pixels
-                if j>2:
-                    k=j-2 #new column index so horizontal doesn't overlap with sobel
-                    #detect same value adjacent pixels
-                    if sb[i][k]==sb[i][k-1] and sb[i][k]>0.1:
-                        count+=1
-                    #if adjacent pixels are different value, reset count
-                    else:
-                        count = 0
-                    #once 100 consecutive same value pixels are detected, color the platform-tracking image white
-                    if count == 100:
-                        count = 0
-                        horiz[i][k-99:k+1] = [1]*100
-                #above code merges grayHorizontal
-
-        return horiz#sb
+        return horiz
 
     """grayHorizontal() merged into sobel(). Saves about ~1 second (on my machine) of processing time."""
     #Image processing functions will be moved to own class in future
@@ -140,4 +141,5 @@ class ImageProcessing(object):
                     #width, height, x, y
                     platforms.append([cp-c,rp-r,c,r])
 
+        print("# of platforms: %d" % len(platforms))
         return platforms
